@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+
+from xmlrpc.client import ServerProxy
+
+client = ServerProxy('http://localhost:4224/', allow_none=True)
+try:
+    client.ping()
+except ConnectionRefusedError:
+    print('Sorry, the git gud server seems to be down.')
+    exit(1)
+
+print('How can I help you git gud? (enter \'quit\' or press Ctrl-D to exit)')
+
+def ask():
+    while True:
+        try:
+            q = input('>> ')
+        except KeyboardInterrupt:
+            print()
+            continue
+        except EOFError:
+            print('quit')
+            break
+
+        if q == 'quit' or q == 'q':
+            break
+
+        response = client.query(q)
+        if response is not None and len(response.strip()) != 0:
+            print(response)
+
+ask()
