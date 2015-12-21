@@ -74,15 +74,19 @@ def classify_targets(self, node):
     self.targets = get_targets(node)[1:]
 
 def classify_actors(self, node):
-    first_actors = get_children(node, lambda c: c.dep_ == 'nsubj')
-    def get_actors(l, node):
-        l.append(node)
-        for c in node.children:
-            if c.dep_ == 'conj':
-                get_actors(l, c)
     actors = []
-    for a in first_actors:
-        get_actors(actors, a)
+    def collect_actors(actors, node):
+        first_actors = get_children(node, lambda c: c.dep_ == 'nsubj')
+        def get_actors(l, node):
+            l.append(node)
+            for c in node.children:
+                if c.dep_ == 'conj':
+                    get_actors(l, c)
+        for a in first_actors:
+            get_actors(actors, a)
+    collect_actors(actors, node)
+    for aux in get_children(node, lambda c: c.dep_ == 'aux' and c.pos_ == 'VERB'):
+        collect_actors(actors, aux)
     self.actors = actors
 
 classify_misc       = pipeline(classify_targets, classify_actors)

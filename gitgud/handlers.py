@@ -37,13 +37,15 @@ def _get_misc_handler_for_vb(vb):
     if vb.lemma_ in MISC_HANDLERS:
         return MISC_HANDLERS[vb.lemma_]
 
+    from gitgud.nlp import nlp
+
     handlers = [(nlp(k)[0].similarity(vb), v) for k, v in MISC_HANDLERS.items()]
     handlers = sorted(handlers, reverse=True, key=lambda x: x[0])
 
     if not handlers:
         return [default_handler]
 
-    sim, handler = l[0]
+    sim, handler = handlers[0]
     return handler if sim > 0.65 else [default_handler]
 
 def handle_misc(role):
@@ -74,3 +76,5 @@ def handle_define(role):
     if not defs:
         return 'What do you want me to give you the meaning of?'
     return '\n\n'.join(defs)
+
+
