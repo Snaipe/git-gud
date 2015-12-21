@@ -27,31 +27,40 @@ MISC_HANDLERS = dict()
 def misc(*actions):
     def decorator(func):
         for action in actions:
-            if action not in HANDLERS:
+            if action not in MISC_HANDLERS:
                 MISC_HANDLERS[action] = list()
             MISC_HANDLERS[action].append(func)
         return func
     return decorator
 
 def _get_misc_handler_for_vb(vb):
-    if vb.lemma_ in HANDLERS:
-        return HANDLERS[vb.lemma_]
+    if vb.lemma_ in MISC_HANDLERS:
+        return MISC_HANDLERS[vb.lemma_]
 
-    handlers = [(nlp(k)[0].similarity(vb), v) for k, v in HANDLERS.items()]
+    handlers = [(nlp(k)[0].similarity(vb), v) for k, v in MISC_HANDLERS.items()]
+    handlers = sorted(handlers, reverse=True, key=lambda x: x[0])
 
-    sim, handler = sorted(handlers, reverse=True, key=lambda x: x[0])[0]
+    if not handlers:
+        return [default_handler]
+
+    sim, handler = l[0]
     return handler if sim > 0.65 else [default_handler]
 
 def handle_misc(role):
-    handler = _get_misc_handler_for_vb(role.node)
-    return handler(role)
+    handlers = _get_misc_handler_for_vb(role.node)
+    result = []
+    for h in handlers:
+        res = h(role)
+        if res:
+            result.append(res)
+    return '\n\n'.join(result)
 
 DEFINITIONS = dict()
 
 def definition(*nouns):
     def decorator(func):
         for noun in nouns:
-            if noun not in HANDLERS:
+            if noun not in DEFINITIONS:
                 DEFINITIONS[noun] = list()
             DEFINITIONS[noun].append(func)
         return func
@@ -60,7 +69,8 @@ def definition(*nouns):
 def handle_define(role):
     defs = []
     for t in role.targets:
-        defs.append(DEFINITIONS[t.lemma_](role))
+        for defn in DEFINITIONS[t.lemma_]:
+            defs.append(defn(role))
     if not defs:
         return 'What do you want me to give you the meaning of?'
     return '\n\n'.join(defs)

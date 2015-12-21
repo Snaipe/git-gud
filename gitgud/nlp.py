@@ -45,7 +45,10 @@ def get_children(node, f):
     return filter(f, node.children)
 
 def get_child(node, f):
-    return next(filter(f, node.children))
+    try:
+        return next(filter(f, node.children))
+    except StopIteration:
+        return None
 
 def get_child_by_arc(node, arc):
     return get_child(node, lambda c: c.dep_ == arc)
@@ -55,10 +58,13 @@ def get_child_by_tag(node, tag):
 
 ## SRL
 
-def classify_judgement(self, node):
-    pass
+def pipeline(*args):
+    def wrapper(*a, **kw):
+        for f in args:
+            f(*a, **kw)
+    return wrapper
 
-def classify_define(self, node):
+def classify_targets(self, node):
     def get_targets(node):
         tgs = [node]
         for c in node.children:
@@ -66,6 +72,22 @@ def classify_define(self, node):
                 tgs += get_targets(c)
         return tgs
     self.targets = get_targets(node)[1:]
+
+def classify_actors(self, node):
+    first_actors = get_children(node, lambda c: c.dep_ == 'nsubj')
+    def get_actors(l, node):
+        l.append(node)
+        for c in node.children:
+            if c.dep_ == 'conj':
+                get_actors(l, c)
+    actors = []
+    for a in first_actors:
+        get_actors(actors, a)
+    self.actors = actors
+
+classify_misc       = pipeline(classify_targets, classify_actors)
+classify_judgement  = pipeline(classify_targets)
+classify_define     = pipeline(classify_targets)
 
 def detect_define(node):
     if node.lemma_ == 'be':
@@ -104,9 +126,12 @@ class SemanticFrame(Enum):
     }
     MISC = {
         'detect': lambda x: True,
-        'classify': lambda x, y: None,
+        'classify': classify_misc,
         'handler': handlers.handle_misc,
     }
+
+    def __repr__(self):
+        return str(self)
 
 _PINDENT = 0
 def pretty_repr(self):
