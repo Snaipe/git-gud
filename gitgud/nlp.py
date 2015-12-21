@@ -92,9 +92,7 @@ def classify_actors(self, node):
 def classify_truth(self, node):
     self.neg = (len(list(get_children(node, lambda c: c.dep_ == 'neg'))) % 2) == 1
 
-classify_misc       = pipeline(classify_targets, classify_actors)
-classify_judgement  = pipeline(classify_targets)
-classify_define     = pipeline(classify_targets)
+classify_default = pipeline(classify_targets, classify_actors, classify_truth)
 
 def detect_define(node):
     if node.lemma_ == 'be':
@@ -108,32 +106,32 @@ def detect_locate(node):
 class SemanticFrame(Enum):
     JUDGEMENT = {
         'detect': lambda node: node.lemma_ in {'judge', 'blame', 'praise', 'appreciate', 'admire', 'like', 'dislike', 'love', 'hate'},
-        'classify': classify_judgement,
+        'classify': classify_default,
         'handler': lambda x: None,
     }
     STATEMENT = {
         'detect': lambda node: node.lemma_ in {'say', 'tell'},
-        'classify': lambda x, y: None,
+        'classify': classify_default,
         'handler': lambda x: None,
     }
     ACTION = {
         'detect': lambda node: node.lemma_ in {'do', 'undo', 'move', 'fix', 'delete', 'add', 'remove', 'change', 'modify', 'append', 'prepend', 'specify'},
-        'classify': lambda x, y: None,
+        'classify': classify_default,
         'handler': lambda x: None,
     }
     DEFINE = {
         'detect': detect_define,
-        'classify': classify_define,
+        'classify': classify_default,
         'handler': handlers.handle_define,
     }
     LOCATE = {
         'detect': detect_locate,
-        'classify': lambda x, y: None,
+        'classify': classify_default,
         'handler': lambda x: None,
     }
     MISC = {
         'detect': lambda x: True,
-        'classify': classify_misc,
+        'classify': classify_default,
         'handler': handlers.handle_misc,
     }
 
