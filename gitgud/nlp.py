@@ -89,6 +89,9 @@ def classify_actors(self, node):
         collect_actors(actors, aux)
     self.actors = actors
 
+def classify_truth(self, node):
+    self.neg = (len(list(get_children(node, lambda c: c.dep_ == 'neg'))) % 2) == 1
+
 classify_misc       = pipeline(classify_targets, classify_actors)
 classify_judgement  = pipeline(classify_targets)
 classify_define     = pipeline(classify_targets)
