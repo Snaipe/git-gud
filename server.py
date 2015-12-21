@@ -1,15 +1,46 @@
 #!/usr/bin/env python3
 
+"""
+Copyright (C) 2015 Franklin "Snaipe" Mathieu <https://snai.pe>
+
+This file is part of 'git gud'.
+
+'git gud' is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+'git gud' is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with 'git gud'.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 import sys
 import os
 import spacy.en
-import traceback
+import gitgud.nlp
+
+from gitgud.handlers import DEFINITIONS
+
+# plugins
+
+from pluginbase import PluginBase
+
+plugin_base = PluginBase(package='gitgud.plugins')
+
+plugin_source = plugin_base.make_plugin_source(
+    searchpath=['./plugins', '/usr/share/git/git-gud/plugins'])
+
+for p in plugin_source.list_plugins():
+    plugin_source.load_plugin(p)
 
 from xmlrpc.server import SimpleXMLRPCServer
 
 PORT = 4224
-
-nlp = None
 
 # Daemonization
 
@@ -121,87 +152,7 @@ def am_i_gitting_gud(action, target):
     else:
         return 'Uhm... maybe?'
 
-# Server & NLP
-
-WORDS = dict()
-
-def extract_action_and_target(node):
-    if node.lower_ == 'help' or node.similarity(WORDS['want']) > 0.65:
-        for c in node.children:
-            if c.dep_ == 'ccomp':
-                node = c
-                break
-
-    action = node
-    target = None
-
-    if node.lemma_ == 'be':
-        a, t = None, None
-        for c in node.children:
-            if c.dep_ == 'nsubj' and c.lower_ == 'what':
-                a = nlp('define')[0]
-            if c.dep_ == 'attr':
-                t = c
-        if t is not None and a is not None:
-            action, target = a, t
-
-    if target is None:
-        for c in node.children:
-            if c.dep_ == 'dobj' or c.dep_ == 'advmod' or c.dep_ == 'acomp':
-                target = c
-                break
-
-    return action, target
-
-def default_handler(a, t):
-    return "I'm sorry, I couldn't find anything to match what you asked me.\nMaybe try asking me something simpler?"
-
-def get_handler_for_action(action):
-    if action.lemma_ in HANDLERS:
-        return HANDLERS[action.lemma_]
-
-    handlers = [(nlp(k)[0].similarity(action), v) for k, v in HANDLERS.items()]
-
-    sim, handler = sorted(handlers, reverse=True, key=lambda x: x[0])[0]
-    return handler if sim > 0.65 else [default_handler]
-
-ABBREVS = [
-        ('repo', 'repository'),
-        ('dir', 'directory'),
-        ('gud', 'good'),
-    ]
-
-def query(q):
-    if len(q.strip()) == 0:
-        return ''
-
-    try:
-        words = map(lambda x: x.lower_, nlp.tokenizer(q))
-
-        new_words = list()
-        for n in words:
-            for a, w in ABBREVS:
-                if n == a:
-                    n = w
-            new_words.append(n)
-        q = ' '.join(new_words)
-
-        action, target = extract_action_and_target(nlp(q)[:].root)
-
-        handlers = get_handler_for_action(action)
-
-        for handler in handlers:
-            response = handler(action, target)
-            if response is not None:
-                break
-
-        if response is None:
-            return default_handler(action, target)
-        return response
-    except:
-        traceback.print_exc(file=sys.stderr)
-
-    return 'An error occured while processing your last query.'
+from gitgud.nlp import query
 
 def ping():
     pass
@@ -209,13 +160,7 @@ def ping():
 def start_server():
     print('Intializing NLP engine... (this may take a while)')
 
-    global nlp
-    if nlp is None:
-        nlp = spacy.en.English()
-
-    WORDS['want'] = nlp('want')[0]
-    WORDS['good'] = nlp('good')[0]
-    WORDS['bad']  = nlp('bad')[0]
+    gitgud.nlp.init()
 
     print('Starting HTTP server at <http://localhost:{port}>.'.format(port=PORT))
     if not fork_and_daemonize():
