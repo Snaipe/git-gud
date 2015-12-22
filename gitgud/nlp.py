@@ -25,6 +25,7 @@ import pprint
 
 from enum import Enum
 from . import handlers
+from .abbrevs import substitute_abbreviations
 
 nlp = None
 
@@ -216,27 +217,12 @@ def get_handler_for_action(action):
     sim, handler = sorted(handlers, reverse=True, key=lambda x: x[0])[0]
     return handler if sim > 0.65 else [default_handler]
 
-ABBREVS = [
-        ('repo', 'repository'),
-        ('dir', 'directory'),
-        ('gud', 'good'),
-    ]
-
 def query(q):
     if len(q.strip()) == 0:
         return ''
 
     try:
-        words = map(lambda x: x.lower_, nlp.tokenizer(q))
-
-        new_words = list()
-        for n in words:
-            for a, w in ABBREVS:
-                if n == a:
-                    n = w
-            new_words.append(n)
-        q = ' '.join(new_words)
-        s = nlp(q)
+        s = nlp(substitute_abbreviations(q))
 
         role = classify_sentence(s[:].root)
         pprint.pprint(role)
