@@ -59,7 +59,7 @@ class VerbHandler(HandlerBase):
         sim, handler = handlers[0]
         return handler if sim > 0.65 else [default_handler]
 
-    def handle_misc(self, role):
+    def handler(self, role):
         handlers = self.__get_handlers(role.node)
         result = []
         for h in handlers:
