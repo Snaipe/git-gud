@@ -117,12 +117,12 @@ class SemanticFrame(Enum):
     ACTION = {
         'detect': lambda node: node.lemma_ in {'do', 'undo', 'move', 'fix', 'delete', 'add', 'remove', 'change', 'modify', 'append', 'prepend', 'specify'},
         'classify': classify_default,
-        'handler': lambda x: None,
+        'handler': handlers.ACTION.handler,
     }
     DEFINE = {
         'detect': detect_define,
         'classify': classify_default,
-        'handler': handlers.handle_define,
+        'handler': handlers.DEFINE.handler,
     }
     LOCATE = {
         'detect': detect_locate,
@@ -132,7 +132,7 @@ class SemanticFrame(Enum):
     MISC = {
         'detect': lambda x: True,
         'classify': classify_default,
-        'handler': handlers.handle_misc,
+        'handler': handlers.MISC.handler,
     }
 
     def __repr__(self):

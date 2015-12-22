@@ -22,59 +22,109 @@ from enum import Enum
 def default_handler(role):
     return "I'm sorry, I couldn't find anything to match what you asked me.\nMaybe try asking me something simpler?"
 
-MISC_HANDLERS = dict()
+class HandlerBase(object):
+    def __init__(self):
+        self._handlers = dict()
 
-def misc(*actions):
-    def decorator(func):
-        for action in actions:
-            if action not in MISC_HANDLERS:
-                MISC_HANDLERS[action] = list()
-            MISC_HANDLERS[action].append(func)
-        return func
-    return decorator
+    def _decorator(self, *nodes):
+        def decorator(func):
+            for node in nodes:
+                if node not in self._handlers:
+                    self._handlers[node] = list()
+                self._handlers[node].append(func)
+            return func
+        return decorator
 
-def _get_misc_handler_for_vb(vb):
-    if vb.lemma_ in MISC_HANDLERS:
-        return MISC_HANDLERS[vb.lemma_]
+    @property
+    def decorator(self):
+        return self._decorator
 
-    from gitgud.nlp import nlp
+    def handler(self, role):
+        pass
 
-    handlers = [(nlp(k)[0].similarity(vb), v) for k, v in MISC_HANDLERS.items()]
-    handlers = sorted(handlers, reverse=True, key=lambda x: x[0])
+class VerbHandler(HandlerBase):
 
-    if not handlers:
-        return [default_handler]
+    def __get_handlers(self, vb):
+        if vb.lemma_ in self._handlers:
+            return self._handlers[vb.lemma_]
 
-    sim, handler = handlers[0]
-    return handler if sim > 0.65 else [default_handler]
+        from gitgud.nlp import nlp
 
-def handle_misc(role):
-    handlers = _get_misc_handler_for_vb(role.node)
-    result = []
-    for h in handlers:
-        res = h(role)
-        if res:
-            result.append(res)
-    return '\n\n'.join(result)
+        handlers = [(nlp(k)[0].similarity(vb), v) for k, v in self._handlers.items()]
+        handlers = sorted(handlers, reverse=True, key=lambda x: x[0])
 
-DEFINITIONS = dict()
+        if not handlers:
+            return [default_handler]
 
-def definition(*nouns):
-    def decorator(func):
-        for noun in nouns:
-            if noun not in DEFINITIONS:
-                DEFINITIONS[noun] = list()
-            DEFINITIONS[noun].append(func)
-        return func
-    return decorator
+        sim, handler = handlers[0]
+        return handler if sim > 0.65 else [default_handler]
 
-def handle_define(role):
-    defs = []
-    for t in role.targets:
-        for defn in DEFINITIONS[t.lemma_]:
-            defs.append(defn(role))
-    if not defs:
-        return 'What do you want me to give you the meaning of?'
-    return '\n\n'.join(defs)
+    def handle_misc(self, role):
+        handlers = self.__get_handlers(role.node)
+        result = []
+        for h in handlers:
+            res = h(role)
+            if res:
+                result.append(res)
+        return '\n\n'.join(result)
 
+class VerbSubjectHandler(HandlerBase):
 
+    def _decorator(self, actions, *targets):
+        def decorator(func):
+            for action in actions:
+                for target in targets:
+                    if (action, target) not in self._handlers:
+                        self._handlers[(action, target)] = list()
+                    self._handlers[(action, target)].append(func)
+            return func
+        return decorator
+
+    def __get_handlers(self, vb, target):
+        if (vb.lemma_, target.lemma_) in self._handlers:
+            return self._handlers[(vb.lemma_, target.lemma_)]
+
+        from gitgud.nlp import nlp
+
+        handlers = [(nlp(k[0])[0].similarity(vb), nlp(k[1])[0].similarity(target), v) for k, v in self._handlers.items()]
+        handlers = sorted(handlers, reverse=True, key=lambda x: x[0] * 10 + x[1])
+
+        if not handlers:
+            return [default_handler]
+
+        sim_vb, sim_tgt, handler = handlers[0]
+        return handler if sim_vb > 0.65 and sim_tgt > 0.65 else [default_handler]
+
+    def handler(self, role):
+        if not role.targets:
+            return None
+
+        handlers = self.__get_handlers(role.node, role.targets[0])
+        result = []
+        for h in handlers:
+            res = h(role)
+            if res:
+                result.append(res)
+        return '\n\n'.join(result)
+
+class DefinitionHandler(HandlerBase):
+
+    def handler(self, role):
+        defs = []
+        for t in role.targets:
+            if t.lemma_ not in self._handlers:
+                defs.append('A `%s` does not seem to have anything to do with git.' % t.lemma_)
+                continue
+            for defn in self._handlers[t.lemma_]:
+                defs.append(defn(role))
+        if not defs:
+            return 'What do you want me to give you the meaning of?'
+        return '\n\n'.join(defs)
+
+DEFINE  = DefinitionHandler()
+ACTION  = VerbSubjectHandler()
+MISC    = VerbHandler()
+
+definition  = DEFINE.decorator
+action      = ACTION.decorator
+misc        = MISC.decorator

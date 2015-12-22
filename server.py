@@ -24,8 +24,6 @@ import os
 import spacy.en
 import gitgud.nlp
 
-from gitgud.handlers import DEFINITIONS
-
 # plugins
 
 from pluginbase import PluginBase
