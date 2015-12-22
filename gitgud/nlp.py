@@ -116,7 +116,7 @@ class SemanticFrame(Enum):
         'handler': lambda x: None,
     }
     ACTION = {
-        'detect': lambda node: node.lemma_ in {'do', 'undo', 'move', 'fix', 'delete', 'add', 'remove', 'change', 'modify', 'append', 'prepend', 'specify'},
+        'detect': lambda node: node.lemma_ in {'do', 'undo', 'move', 'fix', 'repair', 'delete', 'add', 'remove', 'change', 'edit', 'append', 'prepend', 'specify'},
         'classify': classify_default,
         'handler': handlers.ACTION.handler,
     }
