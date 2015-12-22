@@ -13,6 +13,7 @@ print('How can I help you git gud? (enter \'quit\' or press Ctrl-D to exit)')
 
 def ask():
     while True:
+        import readline
         try:
             q = input('>> ')
         except KeyboardInterrupt:
@@ -22,7 +23,7 @@ def ask():
             print('quit')
             break
 
-        if q == 'quit' or q == 'q':
+        if q in {'quit', 'q', 'leave', 'exit', 'bye'}:
             break
 
         response = client.query(q)
