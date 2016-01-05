@@ -20,7 +20,14 @@ along with 'git gud'.  If not, see <http://www.gnu.org/licenses/>.
 from enum import Enum
 
 def default_handler(role):
-    return "I'm sorry, I couldn't find anything to match what you asked me.\nMaybe try asking me something simpler?"
+    return ["I'm sorry, I couldn't find anything to match what you asked me.", "Maybe try asking me something simpler?"]
+
+def list_extend(l, elts):
+    if elts:
+        if type(elts) == list:
+            l += elts
+        else:
+            l.append(elts)
 
 class HandlerBase(object):
     def __init__(self):
@@ -63,10 +70,8 @@ class VerbHandler(HandlerBase):
         handlers = self.__get_handlers(role.node)
         result = []
         for h in handlers:
-            res = h(role)
-            if res:
-                result.append(res)
-        return '\n\n'.join(result)
+            list_extend(result, h(role))
+        return result
 
 class VerbSubjectHandler(HandlerBase):
 
@@ -102,10 +107,8 @@ class VerbSubjectHandler(HandlerBase):
         handlers = self.__get_handlers(role.node, role.targets[0])
         result = []
         for h in handlers:
-            res = h(role)
-            if res:
-                result.append(res)
-        return '\n\n'.join(result)
+            list_extend(result, h(role))
+        return result
 
 class DefinitionHandler(HandlerBase):
 
@@ -116,10 +119,10 @@ class DefinitionHandler(HandlerBase):
                 defs.append('A `%s` does not seem to have anything to do with git.' % t.lemma_)
                 continue
             for defn in self._handlers[t.lemma_]:
-                defs.append(defn(role))
+                list_extend(defs, defn(role))
         if not defs:
-            return 'What do you want me to give you the meaning of?'
-        return '\n\n'.join(defs)
+            return ['What do you want me to give you the meaning of?']
+        return defs
 
 DEFINE  = DefinitionHandler()
 ACTION  = VerbSubjectHandler()

@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
 
+import textwrap
+import colorama
+import sys
+
 from xmlrpc.client import ServerProxy
-
-client = ServerProxy('http://localhost:4224/', allow_none=True)
-try:
-    client.ping()
-except ConnectionRefusedError:
-    print('Sorry, the git gud server seems to be down.')
-    exit(1)
-
-print('How can I help you git gud? (enter \'quit\' or press Ctrl-D to exit)')
+from rst2ansi import rst2ansi
 
 def ask():
+    colorama.init()
+
+    client = ServerProxy('http://localhost:4224/', allow_none=True)
+    try:
+        client.ping()
+    except ConnectionRefusedError:
+        print('Sorry, the git gud server seems to be down.')
+        exit(1)
+
+    print('How can I help you git gud? (enter \'quit\' or press Ctrl-D to exit)')
+
     while True:
         import readline
         try:
-            q = input('>> ')
+            query = input('>> ')
         except KeyboardInterrupt:
             print()
             continue
@@ -23,11 +30,17 @@ def ask():
             print('quit')
             break
 
-        if q in {'quit', 'q', 'leave', 'exit', 'bye'}:
+        if query in {'quit', 'q', 'leave', 'exit', 'bye'}:
             break
 
-        response = client.query(q)
-        if response is not None and len(response.strip()) != 0:
-            print(response)
+        response = client.query(query)
+        if response:
+            out = rst2ansi(response)
+            out = textwrap.indent(out, colorama.Style.DIM + '<< ' + colorama.Style.NORMAL, lambda line: True)
 
-ask()
+            print()
+            print(out)
+            print()
+
+if __name__ == '__main__':
+    ask()

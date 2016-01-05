@@ -22,6 +22,7 @@ import os
 import spacy.en
 import traceback
 import pprint
+import textwrap
 
 from enum import Enum
 from . import handlers
@@ -205,8 +206,8 @@ def extract_action_and_target(node):
 
     return action, target
 
-def default_handler(a, t):
-    return "I'm sorry, I couldn't find anything to match what you asked me.\nMaybe try asking me something simpler?"
+def default_handler(*args, **kwargs):
+    return ["I'm sorry, I couldn't find anything to match what you asked me.", "Maybe try asking me something simpler?"]
 
 def get_handler_for_action(action):
     if action.lemma_ in HANDLERS:
@@ -229,8 +230,8 @@ def query(q):
 
         response = role.frame.value['handler'](role)
         if response is None:
-            return default_handler(None, None)
-        return response
+            response = default_handler()
+        return '\n\n'.join(map(textwrap.dedent, response))
     except:
         traceback.print_exc(file=sys.stderr)
 
