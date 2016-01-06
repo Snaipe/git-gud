@@ -22,7 +22,8 @@ along with 'git gud'.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import os
 import spacy.en
-import gitgud.nlp
+
+from . import nlp
 
 # plugins
 
@@ -83,7 +84,7 @@ def fork_and_daemonize():
 
 # Handlers
 
-from gitgud.nlp import query
+from .nlp import query
 
 def ping():
     pass
@@ -91,7 +92,7 @@ def ping():
 def start_server():
     print('Intializing NLP engine... (this may take a while)')
 
-    gitgud.nlp.init()
+    nlp.init()
 
     print('Starting HTTP server at <http://localhost:{port}>.'.format(port=PORT))
     if not fork_and_daemonize():
@@ -104,5 +105,3 @@ def start_server():
         server.serve_forever()
     except:
         server.server_close()
-
-start_server()
