@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Copyright (C) 2015 Franklin "Snaipe" Mathieu <https://snai.pe>
 
